@@ -2,7 +2,7 @@
 
 <p align="center"><img src="https://socialify.git.ci/malezjaa/ciri/image?font=Inter&amp;issues=1&amp;language=1&amp;name=1&amp;owner=1&amp;pattern=Transparent&amp;pulls=1&amp;stargazers=1&amp;theme=Auto" alt="project-image"></p>
 
-<p id="description">Simple game engine using [three-d](https://github.com/asny/three-d) for rendering.</p>
+Simple game engine using [three-d](https://github.com/asny/three-d) for rendering.
 
 <p align="center"><img src="https://img.shields.io/github/sponsors/malezjaa" alt="shields"><img src="https://img.shields.io/github/issues/malezjaa/ciri" alt="shields"><img src="https://img.shields.io/github/issues-pr/malezjaa/ciri" alt="shields"></p>
 
