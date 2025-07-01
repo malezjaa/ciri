@@ -1,0 +1,16 @@
+[package]
+name = "ciri_core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+three-d = "0.18.2"
+three-d-asset = "0.9.2"
+libm = "0.2.15"
+
+[lints]
+workspace = true
+
+[[example]]
+name = "3d"
+path = "../examples/example-3d/src/main.rs"
