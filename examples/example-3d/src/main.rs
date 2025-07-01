@@ -1,4 +1,4 @@
-use ciri_core::{
+use ciri::{
     camera::{Camera, CameraPresets},
     engine::Engine,
     math::degrees,

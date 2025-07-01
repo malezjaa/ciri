@@ -19,7 +19,7 @@ Here're some of the project's best features:
 <p>1. Add crate</p>
 
 ```
-cargo add ciri_core
+cargo add ciri
 ```
 
 <p>2. Add code</p>
