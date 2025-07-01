@@ -1,13 +1,7 @@
 <h1 align="center" id="title">Ciri Engine</h1>
 
-<p align="center"><img src="https://socialify.git.ci/malezjaa/ciri/image?font=Inter&amp;issues=1&amp;language=1&amp;name=1&amp;owner=1&amp;pattern=Transparent&amp;pulls=1&amp;stargazers=1&amp;theme=Auto" alt="project-image"></p>
+<p align="center"><img src="https://socialify.git.ci/malezjaa/ciri/image?custom_language=Rust&issues=1&language=1&name=1&owner=1&pulls=1&stargazers=1&theme=Auto" alt="ciri" width="640" height="320" /></p>
 <h3 id="description" align="center">Simple game engine using <a href="https://github.com/asny/three-d">three-d</a> for rendering.</h3>
-
-<p align="center">
-  <img src="https://img.shields.io/github/sponsors/malezjaa" alt="shields">&nbsp;
-  <img src="https://img.shields.io/github/issues/malezjaa/ciri" alt="shields">&nbsp;
-  <img src="https://img.shields.io/github/issues-pr/malezjaa/ciri" alt="shields">
-</p>
 
 <h2>🧐 Features</h2>
 
