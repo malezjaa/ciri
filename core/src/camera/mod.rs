@@ -1,7 +1,6 @@
 mod builder;
-mod orbit;
-mod presets;
 pub mod manager;
+mod presets;
 
 use crate::{
     structs::{Transform, Vec3},
@@ -9,10 +8,9 @@ use crate::{
 };
 use three_d::{ColorMapping, Event, Mat4, Radians, ToneMapping, Viewer, Viewport};
 
-pub use orbit::*;
+use crate::frame::Frame;
 pub use builder::*;
 pub use presets::*;
-use crate::frame::Frame;
 
 #[derive(Debug, Clone, Copy)]
 pub enum CameraType {
@@ -141,7 +139,12 @@ impl Camera {
         }
     }
 
-    fn handle_orbit_events(&mut self, frame: &mut Frame, min_distance: f32, max_distance: f32) -> bool {
+    fn handle_orbit_events(
+        &mut self,
+        frame: &mut Frame,
+        min_distance: f32,
+        max_distance: f32,
+    ) -> bool {
         let mut change = false;
         let events = &mut frame.input.events;
 
@@ -191,4 +194,3 @@ impl Camera {
         change
     }
 }
-
