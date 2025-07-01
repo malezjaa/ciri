@@ -31,7 +31,7 @@ impl Vec3 {
     /// Calculates the dot product of two vector3.
     #[inline]
     pub fn dot(self, rhs: Self) -> f32 {
-        (self.x * rhs.x) + (self.y * rhs.y) + (self.z * rhs.z)
+        self.z.mul_add(rhs.z, self.x.mul_add(rhs.x, self.y * rhs.y))
     }
 
     /// Calculates length of the vector.
@@ -54,28 +54,32 @@ impl Vec3 {
 
     /// The cross-product of the lhs and rhs vectors. This vector is usually not normalized.
     #[inline]
+    #[must_use]
     pub fn cross(self, rhs: Self) -> Self {
         Self {
-            x: self.y * rhs.z - rhs.y * self.z,
-            y: self.z * rhs.x - rhs.z * self.x,
-            z: self.x * rhs.y - rhs.x * self.y,
+            x: self.y.mul_add(rhs.z, -(rhs.y * self.z)),
+            y: self.z.mul_add(rhs.x, -(rhs.z * self.x)),
+            z: self.x.mul_add(rhs.y, -(rhs.x * self.y)),
         }
     }
 
     /// Calculates the distance between two three-dimensional points.
     #[inline]
+    #[must_use]
     pub fn distance(self, rhs: Self) -> f32 {
         (self - rhs).length()
     }
 
     /// Interpolates between the points a and b by the interpolant t.
     #[inline]
+    #[must_use]
     pub fn lerp(self, rhs: Self, t: f32) -> Self {
         self * (1.0 - t) + rhs * t
     }
 
     /// Returns a vector made from the largest components of two vectors.
     #[inline]
+    #[must_use]
     pub fn max(self, rhs: Self) -> Self {
         Self {
             x: if self.x > rhs.x { self.x } else { rhs.x },
@@ -86,6 +90,7 @@ impl Vec3 {
 
     /// Returns a vector made from the smallest components of two vectors.
     #[inline]
+    #[must_use]
     pub fn min(self, rhs: Self) -> Self {
         Self {
             x: if self.x < rhs.x { self.x } else { rhs.x },

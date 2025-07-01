@@ -14,9 +14,7 @@ use three_d_asset::{Mat4, Srgba};
 
 fn main() {
     let engine = Engine::new(EngineOptions::builder().with_name("Builder Example").build())
-        .with_camera(
-            CameraPresets::orbit_around_origin_at_distance(8.0).fov(60.0).near_far(0.1, 500.0),
-        );
+        .with_orbit_camera();
 
     let mut sphere = Gm::new(
         Mesh::new(&engine.context(), &CpuMesh::sphere(16)),

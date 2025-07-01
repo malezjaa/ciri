@@ -1,3 +1,4 @@
+use std::f32::consts::FRAC_1_SQRT_2;
 use crate::camera::CameraBuilder;
 
 pub struct CameraPresets;
@@ -12,14 +13,14 @@ impl CameraPresets {
     }
 
     pub fn orbit_around_origin_at_distance(distance: f32) -> CameraBuilder {
-        let pos = distance * 0.7071;
+        let pos = distance * FRAC_1_SQRT_2;
         CameraBuilder::new()
             .perspective()
             .position(pos, pos * 0.5, pos)
             .target_origin()
             .with_orbit_controls()
     }
-    
+
     pub fn top_down() -> CameraBuilder {
         CameraBuilder::new()
             .orthographic()

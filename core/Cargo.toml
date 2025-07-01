@@ -2,11 +2,17 @@
 name = "ciri_core"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+repository = "https://github.com/malezjaa/ciri"
+readme = "../README.md"
+keywords = ["games", "game", "engine", "game-engine", "gameengine"]
+categories = ["game-engines", "game-development", "games"]
+description = "Simple game engine using three-d"
 
 [dependencies]
+libm = "0.2.15"
 three-d = "0.18.2"
 three-d-asset = "0.9.2"
-libm = "0.2.15"
 
 [lints]
 workspace = true

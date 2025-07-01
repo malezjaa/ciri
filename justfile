@@ -15,7 +15,7 @@ ready:
     git status
 
 fix:
-    cargo clippy --fix --allow-staged --no-deps
+    cargo clippy --fix --allow-staged --no-deps --allow-dirty
     just fmt
     git status
 

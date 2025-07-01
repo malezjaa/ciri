@@ -1,4 +1,4 @@
-use three_d::{SurfaceSettings, Window, WindowSettings};
+use three_d::{SurfaceSettings, WindowSettings};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EngineOptions {
@@ -22,32 +22,44 @@ pub struct EngineOptionsBuilder {
     window: WindowSettings,
 }
 
+impl Default for EngineOptionsBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EngineOptionsBuilder {
+    #[must_use]
     pub fn with_name(mut self, name: &str) -> Self {
         self.window.title = name.to_string();
         self
     }
 
+    #[must_use]
     pub fn min_size(mut self, width: u32, height: u32) -> Self {
         self.window.min_size = (width, height);
         self
     }
 
+    #[must_use]
     pub fn max_size(mut self, width: u32, height: u32) -> Self {
         self.window.max_size = Some((width, height));
         self
     }
 
+    #[must_use]
     pub fn initial_size(mut self, width: u32, height: u32) -> Self {
         self.window.initial_size = Some((width, height));
         self
     }
 
+    #[must_use]
     pub fn borderless(mut self, borderless: bool) -> Self {
         self.window.borderless = borderless;
         self
     }
 
+    #[must_use]
     pub fn surface_settings(mut self, settings: SurfaceSettings) -> Self {
         self.window.surface_settings = settings;
         self

@@ -6,7 +6,7 @@ use crate::{
     frame::Frame,
     options::EngineOptions,
 };
-use three_d::{Context, FrameInput, FrameOutput, Window};
+use three_d::{Context, FrameOutput, Window};
 use three_d_asset::Viewport;
 
 pub struct Engine {
@@ -25,7 +25,7 @@ impl Engine {
     }
 
     pub fn render_loop<F: 'static + FnMut(Frame) -> FrameOutput>(self, mut callback: F) {
-        self.window.render_loop(move |input| callback(Frame::new(input)))
+        self.window.render_loop(move |input| callback(Frame::new(input)));
     }
 
     pub fn render_loop_with_camera<F: 'static + FnMut(&mut Frame, &Camera) -> FrameOutput>(
@@ -47,7 +47,7 @@ impl Engine {
             } else {
                 FrameOutput::default()
             }
-        })
+        });
     }
 
     pub fn viewport(&self) -> Viewport {
@@ -135,26 +135,31 @@ impl Engine {
         self.add_camera(camera)
     }
 
+    #[must_use]
     pub fn with_default_camera(mut self) -> Self {
         self.setup_default_camera();
         self
     }
 
+    #[must_use]
     pub fn with_orbit_camera(mut self) -> Self {
         self.setup_orbit_camera();
         self
     }
 
+    #[must_use]
     pub fn with_orbit_camera_at_distance(mut self, distance: f32) -> Self {
         self.setup_orbit_camera_at_distance(distance);
         self
     }
 
+    #[must_use]
     pub fn with_top_down_camera(mut self, height: f32) -> Self {
         self.setup_top_down_camera(height);
         self
     }
 
+    #[must_use]
     pub fn with_camera(mut self, builder: CameraBuilder) -> Self {
         self.add_camera(builder.build(self.viewport()));
         self

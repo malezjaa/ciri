@@ -85,7 +85,7 @@ impl Camera {
             tone_mapping: ToneMapping::default(),
             color_mapping: ColorMapping::default(),
             control: ControlType::None,
-            target: target.into(),
+            target,
             auto_viewport: true,
         }
     }
@@ -164,7 +164,7 @@ impl Camera {
                 }
                 Event::MouseWheel { delta, handled, .. } => {
                     if !*handled {
-                        let speed = 0.01 * self.target.distance(self.position().into()) + 0.001;
+                        let speed = 0.01f32.mul_add(self.target.distance(self.position().into()), 0.001);
                         self.inner.zoom_towards(
                             self.target.into(),
                             speed * delta.1,
