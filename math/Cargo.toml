@@ -1,0 +1,11 @@
+[package]
+name = "ciri_math"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glam = { version = "0.30.4" }
+three-d = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,9 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["core", "examples/*"]
+members = ["core", "examples/*", "math"]
 
 [workspace.dependencies]
 ciri = { path = "core" }
+ciri_math = { path = "math" }
+three-d = "0.18.2"
 
 [workspace.lints.rust]
 absolute_paths_not_starting_with_crate = "warn"

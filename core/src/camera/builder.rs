@@ -1,8 +1,5 @@
-use crate::{
-    camera::{Camera, CameraType, ControlType},
-    structs::{Transform, Vec3},
-    vector,
-};
+use crate::camera::{Camera, CameraType, ControlType};
+use ciri_math::{Transform, Vec3, vector, Quat};
 use three_d_asset::{Viewport, degrees};
 
 pub struct CameraBuilder {
@@ -55,7 +52,7 @@ impl CameraBuilder {
         self.position = vector!(x, y, z);
         self
     }
-    
+
     #[must_use]
     pub fn position_vec(mut self, position: Vec3) -> Self {
         self.position = position;
@@ -142,7 +139,9 @@ impl CameraBuilder {
     }
 
     pub fn build(self, viewport: Viewport) -> Camera {
-        let transform = Transform::new(self.position, self.target - self.position, Vec3::ZERO);
+        let direction = (self.target - self.position).normalize();
+        let rotation = Quat::from_rotation_arc(Vec3::Z, direction);
+        let transform = Transform::new(self.position, rotation, Vec3::ZERO);
 
         let mut camera = match self.camera_type {
             CameraType::Perspective => Camera::new_3d(

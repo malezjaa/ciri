@@ -2,14 +2,11 @@ mod builder;
 pub mod manager;
 mod presets;
 
-use crate::{
-    structs::{Transform, Vec3},
-    *,
-};
 use three_d::{ColorMapping, Event, Mat4, Radians, ToneMapping, Viewer, Viewport};
 
 use crate::frame::Frame;
 pub use builder::*;
+use ciri_math::{Transform, Vec3, from_glam_vec, to_glam_vec, vector};
 pub use presets::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -75,9 +72,9 @@ impl Camera {
         Self {
             inner: three_d_asset::Camera::new_orthographic(
                 viewport,
-                center.into(),
-                target.into(),
-                vector!(0.0, 1.0, 0.0).into(),
+                from_glam_vec(center),
+                from_glam_vec(target),
+                from_glam_vec(vector!(0.0, 1.0, 0.0)),
                 viewport.height as f32,
                 0.0,
                 10.0,
@@ -98,14 +95,15 @@ impl Camera {
         z_near: f32,
         z_far: f32,
     ) -> Self {
-        let target = transform.position + transform.rotation;
+        let forward = transform.rotation * Vec3::Z;
+        let target = transform.translation + forward;
 
         Self {
             inner: three_d_asset::Camera::new_perspective(
                 viewport,
-                transform.position.into(),
-                target.into(),
-                up.into(),
+                from_glam_vec(transform.translation),
+                from_glam_vec(forward),
+                from_glam_vec(up),
                 fov_y,
                 z_near,
                 z_far,
@@ -154,7 +152,7 @@ impl Camera {
                     if !*handled && button == &Some(three_d::MouseButton::Left) {
                         let speed = 0.01;
                         self.inner.rotate_around_with_fixed_up(
-                            self.target.into(),
+                            from_glam_vec(self.target),
                             speed * delta.0,
                             speed * delta.1,
                         );
@@ -164,9 +162,10 @@ impl Camera {
                 }
                 Event::MouseWheel { delta, handled, .. } => {
                     if !*handled {
-                        let speed = 0.01f32.mul_add(self.target.distance(self.position().into()), 0.001);
+                        let speed = 0.01f32
+                            .mul_add(self.target.distance(to_glam_vec(self.position())), 0.001);
                         self.inner.zoom_towards(
-                            self.target.into(),
+                            from_glam_vec(self.target),
                             speed * delta.1,
                             min_distance,
                             max_distance,
@@ -177,9 +176,9 @@ impl Camera {
                 }
                 Event::PinchGesture { delta, handled, .. } => {
                     if !*handled {
-                        let speed = self.target.distance(self.position().into()) + 0.1;
+                        let speed = self.target.distance(to_glam_vec(self.position())) + 0.1;
                         self.inner.zoom_towards(
-                            self.target.into(),
+                            from_glam_vec(self.target),
                             speed * *delta,
                             min_distance,
                             max_distance,
