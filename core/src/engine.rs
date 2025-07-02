@@ -6,26 +6,40 @@ use crate::{
     frame::Frame,
     options::EngineOptions,
 };
-use three_d::{Context, FrameOutput, Window};
+use three_d::{Context, FrameOutput, SurfaceSettings, Window, WindowSettings};
 use three_d_asset::Viewport;
 
 pub struct Engine {
-    window: Window,
+    window: Option<Window>,
     options: EngineOptions,
-    camera_manager: CameraManager,
+    pub(crate) camera_manager: CameraManager,
 }
 
 impl Engine {
-    pub fn new(options: EngineOptions) -> Self {
+    pub fn new() -> Self {
         Self {
-            options: options.clone(),
-            window: Window::new(options.into()).unwrap(),
+            options: EngineOptions {
+                window: WindowSettings {
+                    title: "Engine".to_string(),
+                    min_size: (100, 100),
+                    max_size: None,
+                    initial_size: None,
+                    borderless: false,
+                    surface_settings: SurfaceSettings::default(),
+                },
+            },
+            window: None,
             camera_manager: CameraManager::new(),
         }
     }
 
+    pub fn window(&self) -> &Window {
+        self.window.as_ref().expect("engine not initialized")
+    }
+
     pub fn render_loop<F: 'static + FnMut(Frame) -> FrameOutput>(self, mut callback: F) {
-        self.window.render_loop(move |input| callback(Frame::new(input)));
+        let window = self.window.expect("engine not initialized");
+        window.render_loop(move |input| callback(Frame::new(input)));
     }
 
     pub fn render_loop_with_camera<F: 'static + FnMut(&mut Frame, &Camera) -> FrameOutput>(
@@ -36,7 +50,8 @@ impl Engine {
             self.setup_default_camera();
         }
 
-        self.window.render_loop(move |input| {
+        let window = self.window.expect("engine not initialized");
+        window.render_loop(move |input| {
             let mut frame = Frame::new(input);
 
             self.camera_manager.handle_events(&mut frame);
@@ -51,117 +66,51 @@ impl Engine {
     }
 
     pub fn viewport(&self) -> Viewport {
-        self.window.viewport()
+        self.window().viewport()
     }
 
     pub fn context(&self) -> Context {
-        self.window.gl()
-    }
-
-    pub fn add_camera(&mut self, camera: Camera) -> CameraId {
-        self.camera_manager.add_camera(camera)
-    }
-
-    pub fn remove_camera(&mut self, id: CameraId) -> Option<Camera> {
-        self.camera_manager.remove_camera(id)
-    }
-
-    pub fn set_active_camera(&mut self, id: CameraId) -> bool {
-        self.camera_manager.set_active_camera(id)
-    }
-
-    pub fn get_active_camera(&self) -> Option<&Camera> {
-        self.camera_manager.get_active_camera()
-    }
-
-    pub fn get_active_camera_mut(&mut self) -> Option<&mut Camera> {
-        self.camera_manager.get_active_camera_mut()
-    }
-
-    pub fn get_camera(&self, id: CameraId) -> Option<&Camera> {
-        self.camera_manager.get_camera(id)
-    }
-
-    pub fn get_camera_mut(&mut self, id: CameraId) -> Option<&mut Camera> {
-        self.camera_manager.get_camera_mut(id)
-    }
-
-    pub fn camera_ids(&self) -> impl Iterator<Item = CameraId> + '_ {
-        self.camera_manager.camera_ids()
-    }
-
-    pub fn camera_manager(&self) -> &CameraManager {
-        &self.camera_manager
-    }
-
-    pub fn camera_manager_mut(&mut self) -> &mut CameraManager {
-        &mut self.camera_manager
-    }
-
-    pub fn camera(&self) -> CameraBuilder {
-        CameraBuilder::new()
-    }
-
-    pub fn orbit_camera(&self) -> CameraBuilder {
-        CameraPresets::orbit_around_origin()
-    }
-
-    pub fn camera_presets(&self) -> &CameraPresets {
-        &CameraPresets
-    }
-
-    pub fn default_camera(&self) -> Camera {
-        CameraPresets::orbit_around_origin().build(self.viewport())
-    }
-
-    pub fn setup_default_camera(&mut self) -> CameraId {
-        let camera = self.default_camera();
-        self.add_camera(camera)
-    }
-
-    pub fn setup_orbit_camera(&mut self) -> CameraId {
-        let camera = self.orbit_camera().build(self.viewport());
-        self.add_camera(camera)
-    }
-
-    pub fn setup_orbit_camera_at_distance(&mut self, distance: f32) -> CameraId {
-        let camera =
-            CameraPresets::orbit_around_origin_at_distance(distance).build(self.viewport());
-        self.add_camera(camera)
-    }
-
-    pub fn setup_top_down_camera(&mut self, height: f32) -> CameraId {
-        let camera = CameraPresets::top_down_at_height(height).build(self.viewport());
-        self.add_camera(camera)
+        self.window().gl()
     }
 
     #[must_use]
-    pub fn with_default_camera(mut self) -> Self {
-        self.setup_default_camera();
+    pub fn name(mut self, name: &str) -> Self {
+        self.options.window.title = name.to_string();
         self
     }
 
     #[must_use]
-    pub fn with_orbit_camera(mut self) -> Self {
-        self.setup_orbit_camera();
+    pub fn min_size(mut self, width: u32, height: u32) -> Self {
+        self.options.window.min_size = (width, height);
         self
     }
 
     #[must_use]
-    pub fn with_orbit_camera_at_distance(mut self, distance: f32) -> Self {
-        self.setup_orbit_camera_at_distance(distance);
+    pub fn max_size(mut self, width: u32, height: u32) -> Self {
+        self.options.window.max_size = Some((width, height));
         self
     }
 
     #[must_use]
-    pub fn with_top_down_camera(mut self, height: f32) -> Self {
-        self.setup_top_down_camera(height);
+    pub fn initial_size(mut self, width: u32, height: u32) -> Self {
+        self.options.window.initial_size = Some((width, height));
         self
     }
 
     #[must_use]
-    pub fn with_camera(mut self, builder: CameraBuilder) -> Self {
-        self.add_camera(builder.build(self.viewport()));
+    pub fn borderless(mut self, borderless: bool) -> Self {
+        self.options.window.borderless = borderless;
+        self
+    }
+
+    #[must_use]
+    pub fn surface_settings(mut self, settings: SurfaceSettings) -> Self {
+        self.options.window.surface_settings = settings;
+        self
+    }
+
+    pub fn build(mut self) -> Self {
+        self.window = Some(Window::new(self.options.clone().into()).unwrap());
         self
     }
 }

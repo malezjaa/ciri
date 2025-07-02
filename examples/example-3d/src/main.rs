@@ -13,8 +13,8 @@ use three_d::{
 use three_d_asset::{Mat4, Srgba};
 
 fn main() {
-    let engine = Engine::new(EngineOptions::builder().with_name("Builder Example").build())
-        .with_orbit_camera();
+    let mut engine = Engine::new().name("Builder example").build();
+    engine.setup_orbit_camera();
 
     let mut sphere = create_sphere(
         &engine.context(),
@@ -41,13 +41,13 @@ fn main() {
         sphere.aabb(),
         ColorMaterial { color: Srgba::BLACK, ..Default::default() },
     );
-    
+
     let bounding_box_cube = create_bounding_box(
         &engine.context(),
         cube.aabb(),
         ColorMaterial { color: Srgba::BLACK, ..Default::default() },
     );
-    
+
     let bounding_box_cylinder = create_bounding_box(
         &engine.context(),
         cylinder.aabb(),
