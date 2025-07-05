@@ -77,7 +77,7 @@ impl CameraManager {
             if camera.auto_viewport {
                 camera.set_viewport(frame.viewport());
             }
-            camera.handle_events(frame)
+            camera.handle_events(&mut frame.input.events)
         } else {
             false
         }

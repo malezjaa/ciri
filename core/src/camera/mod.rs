@@ -2,12 +2,13 @@ mod builder;
 pub mod manager;
 mod presets;
 
-use three_d::{ColorMapping, Event, Mat4, Radians, ToneMapping, Viewer, Viewport};
+use three_d::{ColorMapping, Event, FrameOutput, Mat4, Radians, ToneMapping, Viewer, Viewport};
 
 use crate::{
     camera::manager::{CameraId, CameraManager},
     engine::Engine,
     frame::Frame,
+    scenes::Scene,
 };
 pub use builder::*;
 use ciri_math::{Transform, Vec3, from_glam_vec, to_glam_vec, vector};
@@ -132,10 +133,10 @@ impl Camera {
         self.inner.set_viewport(viewport)
     }
 
-    pub fn handle_events(&mut self, frame: &mut Frame) -> bool {
+    pub fn handle_events(&mut self, events: &mut Vec<Event>) -> bool {
         match self.control {
             ControlType::Orbit { min_distance, max_distance } => {
-                self.handle_orbit_events(frame, min_distance, max_distance)
+                self.handle_orbit_events(events, min_distance, max_distance)
             }
             ControlType::None => false,
         }
@@ -143,12 +144,11 @@ impl Camera {
 
     fn handle_orbit_events(
         &mut self,
-        frame: &mut Frame,
+        events: &mut Vec<Event>,
         min_distance: f32,
         max_distance: f32,
     ) -> bool {
         let mut change = false;
-        let events = &mut frame.input.events;
 
         for event in events.iter_mut() {
             match event {
@@ -198,7 +198,7 @@ impl Camera {
     }
 }
 
-impl Engine {
+impl Scene {
     pub fn add_camera(&mut self, camera: Camera) -> CameraId {
         self.camera_manager.add_camera(camera)
     }
@@ -252,7 +252,7 @@ impl Engine {
     }
 
     pub fn default_camera(&self) -> Camera {
-        CameraPresets::orbit_around_origin().build(self.viewport())
+        CameraPresets::orbit_around_origin().build(Viewport::new_at_origo(0, 0))
     }
 
     pub fn setup_default_camera(&mut self) -> CameraId {
@@ -261,18 +261,18 @@ impl Engine {
     }
 
     pub fn setup_orbit_camera(&mut self) -> CameraId {
-        let camera = self.orbit_camera().build(self.viewport());
+        let camera = self.orbit_camera().build(Viewport::new_at_origo(0, 0));
         self.add_camera(camera)
     }
 
     pub fn setup_orbit_camera_at_distance(&mut self, distance: f32) -> CameraId {
-        let camera =
-            CameraPresets::orbit_around_origin_at_distance(distance).build(self.viewport());
+        let camera = CameraPresets::orbit_around_origin_at_distance(distance)
+            .build(Viewport::new_at_origo(0, 0));
         self.add_camera(camera)
     }
 
     pub fn setup_top_down_camera(&mut self, height: f32) -> CameraId {
-        let camera = CameraPresets::top_down_at_height(height).build(self.viewport());
+        let camera = CameraPresets::top_down_at_height(height).build(Viewport::new_at_origo(0, 0));
         self.add_camera(camera)
     }
 }

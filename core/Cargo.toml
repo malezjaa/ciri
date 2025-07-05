@@ -13,6 +13,8 @@ description = "Simple game engine using three-d"
 three-d = { workspace = true }
 three-d-asset = "0.9.2"
 ciri_math = { workspace = true }
+id-arena = "2.2.1"
+anyhow = "1.0.98"
 
 [lints]
 workspace = true
@@ -20,3 +22,7 @@ workspace = true
 [[example]]
 name = "3d"
 path = "../examples/example-3d/src/main.rs"
+
+[[example]]
+name = "scenes"
+path = "../examples/scenes/src/main.rs"
