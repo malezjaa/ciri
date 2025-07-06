@@ -4,6 +4,7 @@ use crate::{
     scenes::{SceneTrait, manager::SceneManager},
 };
 use three_d::{Context, FrameInput, FrameOutput};
+use crate::scenes::UpdateResult;
 
 pub struct Engine {
     pub context: Context,
@@ -11,7 +12,7 @@ pub struct Engine {
 }
 
 impl Engine {
-    async fn update_inner(&mut self, input: FrameInput) -> FrameOutput {
+    async fn update_inner(&mut self, input: FrameInput) -> UpdateResult {
         let scene = self
             .scenes
             .active_scene_mut()
@@ -20,7 +21,7 @@ impl Engine {
         scene.full_update(&mut Frame::new(input, self.context.clone())).await
     }
     
-    pub fn update(&mut self, input: FrameInput) -> FrameOutput {
+    pub fn update(&mut self, input: FrameInput) -> UpdateResult {
         block_on(self.update_inner(input))
     }
     

@@ -6,6 +6,7 @@ pub mod engine;
 pub mod frame;
 mod id;
 pub mod lights;
+pub mod logger;
 pub mod macros;
 mod object;
 pub mod options;

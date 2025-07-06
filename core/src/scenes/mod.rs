@@ -9,6 +9,7 @@ use crate::{
     lights::AbstractedLight,
     scenes::components::{Component, Renderer},
 };
+use anyhow::Result;
 use ciri_math::Transform;
 use id_arena::{Arena, Id};
 use std::{
@@ -170,24 +171,24 @@ impl Scene {
     }
 }
 
+pub type UpdateResult = Result<FrameOutput>;
+pub type ResultFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+
 pub trait SceneTrait: Any + Send + Sync + 'static {
-    fn update_sync(&mut self) -> FrameOutput {
-        FrameOutput::default()
+    fn update_sync(&mut self) -> UpdateResult {
+        Ok(FrameOutput::default())
     }
 
-    fn update_async<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = FrameOutput> + Send + 'a>> {
+    fn update_async(&mut self) -> ResultFuture<UpdateResult> {
         Box::pin(async move { self.update_sync() })
     }
 
-    fn full_update<'a>(
-        &'a mut self,
-        frame: &'a mut Frame,
-    ) -> Pin<Box<dyn Future<Output = FrameOutput> + Send + 'a>> {
+    fn full_update<'a>(&'a mut self, frame: &'a mut Frame) -> ResultFuture<'a, UpdateResult> {
         Box::pin(async move {
             let ctx = &frame.ctx;
 
             self.scene().frame = Some(frame.clone());
-            self.update_async().await;
+            self.update_async().await?;
 
             let scene = self.scene();
             scene.camera_manager.handle_events(&mut frame.clone());
@@ -233,11 +234,17 @@ pub trait SceneTrait: Any + Send + Sync + 'static {
             }
             self.scene().reset();
 
-            FrameOutput::default()
+            Ok(FrameOutput::default())
         })
     }
 
-    fn setup(&mut self) {}
+    fn setup_async(&mut self) -> ResultFuture<Result<()>> {
+        Box::pin(async move { self.setup_sync() })
+    }
+
+    fn setup_sync(&mut self) -> Result<()> {
+        Ok(())
+    }
     fn exit(&mut self) {}
 
     fn name(&self) -> &'static str;

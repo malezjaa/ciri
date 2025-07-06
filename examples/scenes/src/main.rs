@@ -1,41 +1,51 @@
+use anyhow::Result;
 use ciri::{
     engine::Engine,
     impl_scene,
     lights::DirectionalLight,
+    logger::init_logger,
     math::Vec3,
-    scenes::{GameObject, Scene, SceneTrait, components::Renderer},
+    scenes::{GameObject, ResultFuture, Scene, SceneTrait, components::Renderer},
     shapes::create_cylinder,
 };
 use ciri_math::{Transform, vector};
+use log::error;
 use three_d::{
-    CpuMaterial, FrameInput, FrameOutput, Geometry, SurfaceSettings, Window, WindowSettings,
+    CpuMaterial, CpuMesh, FrameInput, FrameOutput, Geometry, Gm, Mesh, PhysicalMaterial, Skybox,
+    SurfaceSettings, Window, WindowSettings,
 };
-use three_d_asset::Srgba;
+use three_d_asset::{
+    Srgba,
+    io::{RawAssets, load_async},
+};
+use ciri::scenes::UpdateResult;
 
 #[derive(Default)]
 pub struct GameData {
     pub num: usize,
+    pub assets: RawAssets,
 }
 
 impl_scene!("Game", Game, GameData);
 impl SceneTrait for Game {
-    fn update_sync(&mut self) -> FrameOutput {
-        let ctx = &self.scene.frame().ctx;
+    fn update_async(&mut self) -> ResultFuture<UpdateResult> {
+        Box::pin(async move {
+            let ctx = &self.scene.frame().ctx;
 
-        let cylinder = create_cylinder(
-            ctx,
-            &CpuMaterial { albedo: Srgba::BLUE, ..Default::default() },
-            Transform::from_translation(vector!(0.0, 0.0, 1.5)).scale(Vec3::splat(0.2)),
-        );
+            // https://polyhaven.com/a/klippad_sunrise_2
+            let mut loaded = load_async(&["examples/assets/sunrise_4k.hdr"]).await?;
+            let skybox =
+                Skybox::new_from_equirectangular(&ctx, &loaded.deserialize("sunrise_4k").unwrap());
 
-        self.scene.add_root_object(
-            GameObject::new("environment").with_component(Renderer::new(cylinder)),
-        );
+            self.scene.add_root_object(
+                GameObject::new("environment").with_component(Renderer::new(skybox)),
+            );
 
-        FrameOutput::default()
+            Ok(FrameOutput::default())
+        })
     }
 
-    fn setup(&mut self) {
+    fn setup_sync(&mut self) -> Result<()> {
         self.scene.setup_orbit_camera();
         self.scene.add_light(
             DirectionalLight::builder()
@@ -44,6 +54,8 @@ impl SceneTrait for Game {
                 .intensity(1.0)
                 .build(),
         );
+
+        Ok(())
     }
 
     fn name(&self) -> &'static str {
@@ -56,6 +68,7 @@ impl SceneTrait for Game {
 }
 
 fn main() -> anyhow::Result<()> {
+    init_logger()?;
     let window = Window::new(WindowSettings {
         title: "Scenes!".to_string(),
         max_size: Some((1280, 720)),
@@ -66,9 +79,14 @@ fn main() -> anyhow::Result<()> {
     let mut engine = Engine::new(ctx);
 
     engine.scenes.register(Game::build());
-    engine.scenes.set_active::<Game>();
+    engine.scenes.set_active::<Game>()?;
 
-    window.render_loop(move |input| engine.update(input));
+    window.render_loop(move |input| {
+        engine.update(input).unwrap_or_else(|e| {
+            error!("Error: {}", e);
+            FrameOutput::default()
+        })
+    });
 
     Ok(())
 }

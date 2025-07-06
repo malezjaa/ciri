@@ -1,4 +1,6 @@
 use crate::scenes::{Scene, SceneTrait};
+use anyhow::Result;
+use futures::executor::block_on;
 use std::{
     any::{Any, TypeId},
     collections::HashMap,
@@ -33,11 +35,11 @@ impl SceneManager {
             .and_then(|scene| scene.as_any_mut().downcast_mut::<T>())
     }
 
-    pub fn set_active<T: SceneTrait + 'static>(&mut self) -> bool {
+    pub fn set_active<T: SceneTrait + 'static>(&mut self) -> Result<bool> {
         let type_id = TypeId::of::<T>();
 
         if !self.scenes.contains_key(&type_id) {
-            return false;
+            return Ok(false);
         }
 
         if let Some(active) = self.active_scene_mut() {
@@ -46,10 +48,10 @@ impl SceneManager {
 
         if let Some(scene) = self.scenes.get_mut(&type_id) {
             self.active = type_id;
-            scene.setup();
-            true
+            block_on(scene.setup_async())?;
+            Ok(true)
         } else {
-            false
+            Ok(false)
         }
     }
 
