@@ -20,8 +20,69 @@ use std::{
     sync::Arc,
 };
 use three_d::{ClearState, Context, FrameInput, FrameOutput, Light, Object, Viewer, Window};
+use three_d_asset::io::{RawAssets, load_and_deserialize_async};
 
 pub type GameObjectId = Id<GameObject>;
+
+pub struct GameObject {
+    pub id: Option<GameObjectId>,
+    pub name: String,
+    pub transform: Transform,
+    active: bool,
+    components: HashMap<TypeId, Box<dyn Component>>,
+}
+
+impl Clone for GameObject {
+    fn clone(&self) -> Self {
+        Self {
+            id: None,
+            name: self.name.clone(),
+            transform: self.transform,
+            active: self.active,
+            components: self.components.iter().map(|(k, v)| (*k, v.clone_component())).collect(),
+        }
+    }
+}
+
+impl Debug for GameObject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct(&format!("GameObject \"{}\"", self.name))
+            .field("active", &self.active)
+            .field("transform", &self.transform)
+            .field("components", &self.components)
+            .finish()
+    }
+}
+
+impl GameObject {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            name: name.into(),
+            active: true,
+            transform: Transform::identity(),
+            components: HashMap::new(),
+        }
+    }
+
+    pub fn new_temp(name: String) -> Self {
+        Self {
+            id: None,
+            name,
+            active: true,
+            transform: Transform::identity(),
+            components: HashMap::new(),
+        }
+    }
+
+    pub fn enable(&mut self) {
+        self.active = true;
+    }
+
+    pub fn disable(&mut self) {
+        self.active = false;
+    }
+}
 
 pub struct Scene {
     pub name: &'static str,
@@ -38,75 +99,6 @@ impl Debug for Scene {
     }
 }
 
-pub struct GameObject {
-    pub id: Option<GameObjectId>,
-    pub name: String,
-    pub transform: Transform,
-    active: bool,
-    parent: Option<GameObjectId>,
-    children: Vec<GameObjectId>,
-    components: HashMap<TypeId, Box<dyn Component>>,
-}
-
-impl Clone for GameObject {
-    fn clone(&self) -> Self {
-        Self {
-            id: None,
-            name: self.name.clone(),
-            transform: self.transform,
-            active: self.active,
-            parent: self.parent,
-            children: self.children.clone(),
-            components: self.components.iter().map(|(k, v)| (*k, v.clone_component())).collect(),
-        }
-    }
-}
-
-impl Debug for GameObject {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct(&format!("GameObject \"{}\"", self.name))
-            .field("active", &self.active)
-            .field("transform", &self.transform)
-            .field("components", &self.components)
-            .field("children", &self.children)
-            .finish()
-    }
-}
-
-impl GameObject {
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            name: name.into(),
-            active: true,
-            transform: Transform::identity(),
-            parent: None,
-            children: Vec::new(),
-            components: HashMap::new(),
-        }
-    }
-
-    pub fn new_temp(name: String) -> Self {
-        Self {
-            id: None,
-            name,
-            active: true,
-            transform: Transform::identity(),
-            parent: None,
-            children: Vec::new(),
-            components: HashMap::new(),
-        }
-    }
-
-    pub fn enable(&mut self) {
-        self.active = true;
-    }
-
-    pub fn disable(&mut self) {
-        self.active = false;
-    }
-}
-
 impl Scene {
     pub fn new(name: &'static str) -> Self {
         Self {
@@ -119,35 +111,14 @@ impl Scene {
         }
     }
 
-    pub fn add_root_object(&mut self, temp: GameObject) -> GameObjectId {
+    pub fn add_object(&mut self, temp: GameObject) -> GameObjectId {
         let id = self.id_arena.alloc_with_id(|id| GameObject {
             id: Some(id),
             name: temp.name,
             active: temp.active,
             transform: temp.transform,
-            parent: None,
-            children: Vec::new(),
             components: temp.components,
         });
-
-        self.objects.insert(id, self.id_arena[id].clone());
-        id
-    }
-
-    pub fn add_child_object(&mut self, parent_id: GameObjectId, temp: GameObject) -> GameObjectId {
-        let id = self.id_arena.alloc_with_id(|id| GameObject {
-            id: Some(id),
-            name: temp.name,
-            active: temp.active,
-            transform: temp.transform,
-            parent: Some(parent_id),
-            children: Vec::new(),
-            components: temp.components,
-        });
-
-        if let Some(parent) = self.id_arena.get_mut(parent_id) {
-            parent.children.push(id);
-        }
 
         self.objects.insert(id, self.id_arena[id].clone());
         id
@@ -174,7 +145,7 @@ impl Scene {
 pub type UpdateResult = Result<FrameOutput>;
 pub type ResultFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-pub trait SceneTrait: Any + Send + Sync + 'static {
+pub trait SceneTrait: SceneAuto + Any + Send + Sync + 'static {
     fn update_sync(&mut self) -> UpdateResult {
         Ok(FrameOutput::default())
     }
@@ -185,55 +156,45 @@ pub trait SceneTrait: Any + Send + Sync + 'static {
 
     fn full_update<'a>(&'a mut self, frame: &'a mut Frame) -> ResultFuture<'a, UpdateResult> {
         Box::pin(async move {
-            let ctx = &frame.ctx;
+            {
+                let scene = self.scene();
+                scene.frame = Some(frame.clone());
+                scene.camera_manager.handle_events(frame);
+            }
 
-            self.scene().frame = Some(frame.clone());
             self.update_async().await?;
 
             let scene = self.scene();
-            scene.camera_manager.handle_events(&mut frame.clone());
+            let objects_count = scene.objects().len();
+            let mut objects = Vec::with_capacity(objects_count);
 
-            let mut renderable = vec![];
-
-            fn collect_active_objects(
-                scene: &Scene,
-                object_id: &GameObjectId,
-                renderable: &mut Vec<Renderer>,
-            ) {
-                if let Some(object) = scene.objects().get(object_id) {
-                    if object.active {
-                        if let Some(renderer) = object.get_component::<Renderer>() {
-                            renderable.push(renderer.clone());
-                        }
-
-                        for child_id in &object.children {
-                            collect_active_objects(scene, child_id, renderable);
-                        }
-                    }
+            for (_, object) in scene.objects() {
+                if !object.active {
+                    continue;
                 }
-            }
 
-            for (id, object) in scene.objects() {
-                if object.parent.is_none() {
-                    collect_active_objects(scene, id, &mut renderable);
-                }
-            }
-
-            if let Some(camera) = scene.get_active_camera() {
-                let mut objects: Vec<&dyn Object> = vec![];
-
-                for renderer in &renderable {
+                if let Some(renderer) = object.get_component::<Renderer>() {
                     objects.push(&*renderer.to_render);
                 }
+            }
 
-                let built_lights: Vec<_> = scene.lights.iter().map(|l| l.build(ctx)).collect();
-                let lights: Vec<&dyn Light> = built_lights.iter().map(|l| &**l).collect();
+            let ctx = &frame.ctx;
+            if let Some(camera) = scene.get_active_camera() {
+                let lights_count = scene.lights.len();
+                let mut built_lights = Vec::with_capacity(lights_count);
+                let mut light_refs = Vec::with_capacity(lights_count);
+
+                for light in &scene.lights {
+                    built_lights.push(light.build(ctx));
+                }
+
+                light_refs.extend(built_lights.iter().map(|l| &**l));
 
                 frame.clear(ClearState::color_and_depth(0.5, 0.5, 0.5, 1.0, 1.0));
-                frame.render(camera, objects, lights.as_slice());
+                frame.render(camera, objects, &light_refs);
             }
-            self.scene().reset();
 
+            self.scene().reset();
             Ok(FrameOutput::default())
         })
     }
@@ -246,9 +207,14 @@ pub trait SceneTrait: Any + Send + Sync + 'static {
         Ok(())
     }
     fn exit(&mut self) {}
+}
 
+pub trait SceneAuto {
     fn name(&self) -> &'static str;
     fn scene(&mut self) -> &mut Scene;
+    fn load_assets(&mut self) -> ResultFuture<Result<()>> {
+        Box::pin(async move { Ok(()) })
+    }
 }
 
 impl dyn SceneTrait {
@@ -259,15 +225,58 @@ impl dyn SceneTrait {
 
 #[macro_export]
 macro_rules! impl_scene {
-    ($name:expr, $struct:ident, $data:ty) => {
+    (
+        $name:expr,
+        $struct:ident,
+        $data:ty
+        $(, ( $( $asset_name:ident, $path:expr => $asset_ty:ty ),* $(,)? ) )?
+    ) => {
+        use three_d_asset::io::load_and_deserialize_async;
+
         pub struct $struct {
             pub scene: Scene,
             pub data: $data,
+             $(
+                $(
+                    pub $asset_name: $asset_ty,
+                )*
+            )?
         }
 
         impl Default for $struct {
             fn default() -> Self {
-                Self { scene: Scene::new($name), data: <$data>::default() }
+                Self {
+                    scene: Scene::new($name),
+                    data: <$data>::default(),
+                    $(
+                        $(
+                           $asset_name: <$asset_ty>::default(),
+                        )*
+                    )?
+                }
+            }
+        }
+
+
+        impl SceneAuto for $struct {
+            fn name(&self) -> &'static str {
+                $name
+            }
+
+            fn scene(&mut self) -> &mut Scene {
+                &mut self.scene
+            }
+
+            fn load_assets(&mut self) -> ResultFuture<Result<()>> {
+                Box::pin(async move {
+                    $(
+                        $(
+                            self.$asset_name = load_and_deserialize_async($path).await?;
+                        )*
+                    )?
+
+                    Ok(())
+                })
             }
         }
 

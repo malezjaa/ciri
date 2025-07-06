@@ -5,7 +5,9 @@ use ciri::{
     lights::DirectionalLight,
     logger::init_logger,
     math::Vec3,
-    scenes::{GameObject, ResultFuture, Scene, SceneTrait, components::Renderer},
+    scenes::{
+        GameObject, ResultFuture, Scene, SceneAuto, SceneTrait, UpdateResult, components::Renderer,
+    },
     shapes::create_cylinder,
 };
 use ciri_math::{Transform, vector};
@@ -15,10 +17,9 @@ use three_d::{
     SurfaceSettings, Window, WindowSettings,
 };
 use three_d_asset::{
-    Srgba,
+    Srgba, Texture2D,
     io::{RawAssets, load_async},
 };
-use ciri::scenes::UpdateResult;
 
 #[derive(Default)]
 pub struct GameData {
@@ -26,20 +27,17 @@ pub struct GameData {
     pub assets: RawAssets,
 }
 
-impl_scene!("Game", Game, GameData);
+impl_scene!("Game", Game, GameData, (skybox, "examples/assets/environment.hdr" => Texture2D));
 impl SceneTrait for Game {
     fn update_async(&mut self) -> ResultFuture<UpdateResult> {
         Box::pin(async move {
             let ctx = &self.scene.frame().ctx;
 
-            // https://polyhaven.com/a/klippad_sunrise_2
-            let mut loaded = load_async(&["examples/assets/sunrise_4k.hdr"]).await?;
-            let skybox =
-                Skybox::new_from_equirectangular(&ctx, &loaded.deserialize("sunrise_4k").unwrap());
+            let loaded = &self.skybox;
+            let skybox = Skybox::new_from_equirectangular(&ctx, loaded);
 
-            self.scene.add_root_object(
-                GameObject::new("environment").with_component(Renderer::new(skybox)),
-            );
+            self.scene
+                .add_object(GameObject::new("environment").with_component(Renderer::new(skybox)));
 
             Ok(FrameOutput::default())
         })
@@ -56,14 +54,6 @@ impl SceneTrait for Game {
         );
 
         Ok(())
-    }
-
-    fn name(&self) -> &'static str {
-        "Game"
-    }
-
-    fn scene(&mut self) -> &mut Scene {
-        &mut self.scene
     }
 }
 

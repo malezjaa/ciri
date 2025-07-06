@@ -6,6 +6,7 @@ use std::{
     collections::HashMap,
     sync::Arc,
 };
+use three_d_asset::io::{load_and_deserialize_async, load_async};
 
 pub struct SceneManager {
     scenes: HashMap<TypeId, Box<dyn SceneTrait>>,
@@ -48,7 +49,13 @@ impl SceneManager {
 
         if let Some(scene) = self.scenes.get_mut(&type_id) {
             self.active = type_id;
-            block_on(scene.setup_async())?;
+
+            block_on(async {
+                scene.load_assets().await?;
+                scene.setup_async().await?;
+                Ok::<_, anyhow::Error>(())
+            })?;
+
             Ok(true)
         } else {
             Ok(false)
