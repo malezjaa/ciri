@@ -19,6 +19,22 @@ pub struct GameData {
 
 impl_scene!("Game", Game, GameData);
 impl SceneTrait for Game {
+    fn update_sync(&mut self) -> FrameOutput {
+        let ctx = &self.scene.frame().ctx;
+
+        let cylinder = create_cylinder(
+            ctx,
+            &CpuMaterial { albedo: Srgba::BLUE, ..Default::default() },
+            Transform::from_translation(vector!(0.0, 0.0, 1.5)).scale(Vec3::splat(0.2)),
+        );
+
+        self.scene.add_root_object(
+            GameObject::new("environment").with_component(Renderer::new(cylinder)),
+        );
+
+        FrameOutput::default()
+    }
+
     fn setup(&mut self) {
         self.scene.setup_orbit_camera();
         self.scene.add_light(
@@ -28,21 +44,6 @@ impl SceneTrait for Game {
                 .intensity(1.0)
                 .build(),
         );
-    }
-
-    fn update(&mut self) -> FrameOutput {
-        let ctx = &self.scene.frame().ctx;
-
-        let cylinder = create_cylinder(
-            ctx,
-            &CpuMaterial { albedo: Srgba::BLUE, ..Default::default() },
-            Transform::from_translation(vector!(0.0, 0.0, 1.5)).scale(Vec3::splat(0.2)),
-        );
-
-        self.scene
-            .add_root_object(GameObject::new("cylinder").with_component(Renderer::new(cylinder)));
-
-        FrameOutput::default()
     }
 
     fn name(&self) -> &'static str {

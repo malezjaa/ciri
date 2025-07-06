@@ -15,6 +15,7 @@ use std::{
     any::{Any, TypeId},
     collections::HashMap,
     fmt::{Debug, Pointer, format},
+    pin::Pin,
     sync::Arc,
 };
 use three_d::{ClearState, Context, FrameInput, FrameOutput, Light, Object, Viewer, Window};
@@ -169,64 +170,76 @@ impl Scene {
     }
 }
 
-pub trait SceneTrait: Any {
-    fn full_update(&mut self, frame: &mut Frame) -> FrameOutput {
-        let ctx = &frame.ctx;
+pub trait SceneTrait: Any + Send + Sync + 'static {
+    fn update_sync(&mut self) -> FrameOutput {
+        FrameOutput::default()
+    }
 
-        self.scene().frame = Some(frame.clone());
-        self.update();
+    fn update_async<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = FrameOutput> + Send + 'a>> {
+        Box::pin(async move { self.update_sync() })
+    }
 
-        let scene = self.scene();
-        scene.camera_manager.handle_events(&mut frame.clone());
+    fn full_update<'a>(
+        &'a mut self,
+        frame: &'a mut Frame,
+    ) -> Pin<Box<dyn Future<Output = FrameOutput> + Send + 'a>> {
+        Box::pin(async move {
+            let ctx = &frame.ctx;
 
-        let mut renderable = vec![];
+            self.scene().frame = Some(frame.clone());
+            self.update_async().await;
 
-        fn collect_active_objects(
-            scene: &Scene,
-            object_id: &GameObjectId,
-            renderable: &mut Vec<Renderer>,
-        ) {
-            if let Some(object) = scene.objects().get(object_id) {
-                if object.active {
-                    if let Some(renderer) = object.get_component::<Renderer>() {
-                        renderable.push(renderer.clone());
-                    }
+            let scene = self.scene();
+            scene.camera_manager.handle_events(&mut frame.clone());
 
-                    for child_id in &object.children {
-                        collect_active_objects(scene, child_id, renderable);
+            let mut renderable = vec![];
+
+            fn collect_active_objects(
+                scene: &Scene,
+                object_id: &GameObjectId,
+                renderable: &mut Vec<Renderer>,
+            ) {
+                if let Some(object) = scene.objects().get(object_id) {
+                    if object.active {
+                        if let Some(renderer) = object.get_component::<Renderer>() {
+                            renderable.push(renderer.clone());
+                        }
+
+                        for child_id in &object.children {
+                            collect_active_objects(scene, child_id, renderable);
+                        }
                     }
                 }
             }
-        }
 
-        for (id, object) in scene.objects() {
-            if object.parent.is_none() {
-                collect_active_objects(scene, id, &mut renderable);
-            }
-        }
-
-        if let Some(camera) = scene.get_active_camera() {
-            let mut objects: Vec<&dyn Object> = vec![];
-
-            for renderer in &renderable {
-                objects.push(&*renderer.to_render);
+            for (id, object) in scene.objects() {
+                if object.parent.is_none() {
+                    collect_active_objects(scene, id, &mut renderable);
+                }
             }
 
-            let built_lights: Vec<_> = scene.lights.iter().map(|l| l.build(ctx)).collect();
-            let lights: Vec<&dyn Light> = built_lights.iter().map(|l| &**l).collect();
+            if let Some(camera) = scene.get_active_camera() {
+                let mut objects: Vec<&dyn Object> = vec![];
 
-            frame.clear(ClearState::color_and_depth(0.5, 0.5, 0.5, 1.0, 1.0));
-            frame.render(camera, objects, lights.as_slice());
-        }
-        self.scene().reset();
+                for renderer in &renderable {
+                    objects.push(&*renderer.to_render);
+                }
 
-        FrameOutput::default()
+                let built_lights: Vec<_> = scene.lights.iter().map(|l| l.build(ctx)).collect();
+                let lights: Vec<&dyn Light> = built_lights.iter().map(|l| &**l).collect();
+
+                frame.clear(ClearState::color_and_depth(0.5, 0.5, 0.5, 1.0, 1.0));
+                frame.render(camera, objects, lights.as_slice());
+            }
+            self.scene().reset();
+
+            FrameOutput::default()
+        })
     }
 
     fn setup(&mut self) {}
     fn exit(&mut self) {}
 
-    fn update(&mut self) -> FrameOutput;
     fn name(&self) -> &'static str;
     fn scene(&mut self) -> &mut Scene;
 }

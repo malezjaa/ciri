@@ -6,7 +6,7 @@ use std::{
     fmt::Debug,
 };
 
-pub trait Component: Any + Debug {
+pub trait Component: Any + Debug + Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
 

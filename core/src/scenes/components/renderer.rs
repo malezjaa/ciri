@@ -2,18 +2,18 @@ use crate::{
     impl_component,
     scenes::{Any, Component},
 };
-use std::rc::Rc;
 use three_d::Object;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Renderer {
-    pub to_render: Rc<dyn Object>,
+    pub to_render: Arc<dyn Object + Send + Sync> ,
 }
 
 impl Renderer {
-    pub fn new(to_render: impl Object + 'static) -> Self {
-        Self { to_render: Rc::new(to_render) }
+    pub fn new(to_render: impl Object + Send + Sync + 'static) -> Self {
+        Self { to_render: Arc::new(to_render) }
     }
 }
 

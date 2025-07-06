@@ -3,7 +3,7 @@ use ciri_math::{Mat4, Vec3, from_glam_vec};
 use three_d::{Context, DepthTexture2D, Light};
 use three_d_asset::Srgba;
 
-pub trait AbstractedLight {
+pub trait AbstractedLight: Send + Sync {
     fn build(&self, context: &Context) -> Box<dyn Light>;
 }
 
