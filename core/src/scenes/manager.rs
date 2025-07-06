@@ -36,6 +36,14 @@ impl SceneManager {
     pub fn set_active<T: SceneTrait + 'static>(&mut self) -> bool {
         let type_id = TypeId::of::<T>();
 
+        if !self.scenes.contains_key(&type_id) {
+            return false;
+        }
+
+        if let Some(active) = self.active_scene_mut() {
+            active.exit();
+        }
+
         if let Some(scene) = self.scenes.get_mut(&type_id) {
             self.active = type_id;
             scene.setup();

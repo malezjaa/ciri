@@ -4,6 +4,7 @@ use crate::{
 };
 use std::rc::Rc;
 use three_d::Object;
+use std::fmt::Debug;
 
 #[derive(Clone)]
 pub struct Renderer {

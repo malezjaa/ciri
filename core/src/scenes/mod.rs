@@ -14,7 +14,7 @@ use id_arena::{Arena, Id};
 use std::{
     any::{Any, TypeId},
     collections::HashMap,
-    fmt::Debug,
+    fmt::{Debug, Pointer, format},
     sync::Arc,
 };
 use three_d::{ClearState, Context, FrameInput, FrameOutput, Light, Object, Viewer, Window};
@@ -32,7 +32,7 @@ pub struct Scene {
 
 impl Debug for Scene {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Scene {{ name: {} }}", self.name)
+        f.debug_struct("Scene").field("name", &self.name).field("objects", &self.objects).finish()
     }
 }
 
@@ -62,7 +62,12 @@ impl Clone for GameObject {
 
 impl Debug for GameObject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "GameObject {{ name: {} }}", self.name)
+        f.debug_struct(&format!("GameObject \"{}\"", self.name))
+            .field("active", &self.active)
+            .field("transform", &self.transform)
+            .field("components", &self.components)
+            .field("children", &self.children)
+            .finish()
     }
 }
 
@@ -173,7 +178,7 @@ pub trait SceneTrait: Any {
 
         let scene = self.scene();
         scene.camera_manager.handle_events(&mut frame.clone());
-        
+
         let mut renderable = vec![];
 
         fn collect_active_objects(
@@ -219,6 +224,7 @@ pub trait SceneTrait: Any {
     }
 
     fn setup(&mut self) {}
+    fn exit(&mut self) {}
 
     fn update(&mut self) -> FrameOutput;
     fn name(&self) -> &'static str;

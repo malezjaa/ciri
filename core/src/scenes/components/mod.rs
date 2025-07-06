@@ -1,9 +1,12 @@
 mod renderer;
 
 use crate::scenes::GameObject;
-use std::any::{Any, TypeId};
+use std::{
+    any::{Any, TypeId},
+    fmt::Debug,
+};
 
-pub trait Component: Any {
+pub trait Component: Any + Debug {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
@@ -61,6 +64,12 @@ macro_rules! impl_component {
 
             fn clone_component(&self) -> Box<dyn Component> {
                 Box::new(self.clone())
+            }
+        }
+
+        impl Debug for $type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{:?}", stringify!($type))
             }
         }
     };

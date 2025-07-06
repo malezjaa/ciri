@@ -32,24 +32,15 @@ impl SceneTrait for Game {
 
     fn update(&mut self) -> FrameOutput {
         let ctx = &self.scene.frame().ctx;
-        self.data.num += 1;
 
-        let mut objects = Vec::new();
-        for i in 0..self.data.num {
-            let cylinder = create_cylinder(
-                ctx,
-                &CpuMaterial { albedo: Srgba::BLUE, ..Default::default() },
-                Transform::from_translation(vector!(0.0, 0.0, i as f32 * 1.5))
-                    .scale(Vec3::splat(0.2)),
-            );
+        let cylinder = create_cylinder(
+            ctx,
+            &CpuMaterial { albedo: Srgba::BLUE, ..Default::default() },
+            Transform::from_translation(vector!(0.0, 0.0, 1.5)).scale(Vec3::splat(0.2)),
+        );
 
-            objects.push(GameObject::new("cylinder").with_component(Renderer::new(cylinder)));
-            println!("Adding object: {}", i);
-        }
-
-        for object in objects {
-            self.scene.add_root_object(object);
-        }
+        self.scene
+            .add_root_object(GameObject::new("cylinder").with_component(Renderer::new(cylinder)));
 
         FrameOutput::default()
     }
