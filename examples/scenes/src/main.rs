@@ -2,7 +2,7 @@ use anyhow::Result;
 use ciri::{
     engine::Engine,
     impl_scene,
-    lights::DirectionalLight,
+    lights::{AmbientLight, DirectionalLight},
     logger::init_logger,
     math::Vec3,
     scenes::{
@@ -34,18 +34,18 @@ impl SceneTrait for Game {
 
     fn setup_sync(&mut self, ctx: Context) -> Result<()> {
         self.scene.setup_orbit_camera();
+
+        let skybox = Skybox::new_from_equirectangular(&ctx, &self.skybox);
         self.scene.add_light(
-            DirectionalLight::builder()
+            AmbientLight::builder()
                 .color(Srgba::WHITE)
-                .direction(vector!(0.0, -0.5, -0.5))
+                .environment(&skybox.texture())
                 .intensity(1.0)
                 .build(&ctx),
         );
 
         self.scene.add_object(
-            GameObject::new("environment").dont_clear().with_component(Renderer::new(
-                Skybox::new_from_equirectangular(&ctx, &self.skybox),
-            )),
+            GameObject::new("environment").dont_clear().with_component(Renderer::new(skybox)),
         );
 
         Ok(())
