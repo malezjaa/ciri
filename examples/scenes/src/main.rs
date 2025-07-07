@@ -13,8 +13,8 @@ use ciri::{
 use ciri_math::{Transform, vector};
 use log::error;
 use three_d::{
-    CpuMaterial, CpuMesh, FrameInput, FrameOutput, Geometry, Gm, Mesh, PhysicalMaterial, Skybox,
-    SurfaceSettings, Window, WindowSettings,
+    Context, CpuMaterial, CpuMesh, FrameInput, FrameOutput, Geometry, Gm, Mesh, PhysicalMaterial,
+    Skybox, SurfaceSettings, Window, WindowSettings,
 };
 use three_d_asset::{
     Srgba, Texture2D,
@@ -24,33 +24,28 @@ use three_d_asset::{
 #[derive(Default)]
 pub struct GameData {
     pub num: usize,
-    pub assets: RawAssets,
 }
 
 impl_scene!("Game", Game, GameData, (skybox, "examples/assets/environment.hdr" => Texture2D));
 impl SceneTrait for Game {
-    fn update_async(&mut self) -> ResultFuture<UpdateResult> {
-        Box::pin(async move {
-            let ctx = &self.scene.frame().ctx;
-
-            let loaded = &self.skybox;
-            let skybox = Skybox::new_from_equirectangular(&ctx, loaded);
-
-            self.scene
-                .add_object(GameObject::new("environment").with_component(Renderer::new(skybox)));
-
-            Ok(FrameOutput::default())
-        })
+    fn update(&mut self) -> UpdateResult {
+        Ok(FrameOutput::default())
     }
 
-    fn setup_sync(&mut self) -> Result<()> {
+    fn setup_sync(&mut self, ctx: Context) -> Result<()> {
         self.scene.setup_orbit_camera();
         self.scene.add_light(
             DirectionalLight::builder()
                 .color(Srgba::WHITE)
                 .direction(vector!(0.0, -0.5, -0.5))
                 .intensity(1.0)
-                .build(),
+                .build(&ctx),
+        );
+
+        self.scene.add_object(
+            GameObject::new("environment").dont_clear().with_component(Renderer::new(
+                Skybox::new_from_equirectangular(&ctx, &self.skybox),
+            )),
         );
 
         Ok(())

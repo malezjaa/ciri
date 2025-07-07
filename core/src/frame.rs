@@ -5,12 +5,11 @@ use three_d_asset::Viewport;
 #[derive(Debug, Clone)]
 pub struct Frame {
     pub input: FrameInput,
-    pub ctx: Context,
 }
 
 impl Frame {
-    pub fn new(input: FrameInput, ctx: Context) -> Self {
-        Self { input, ctx }
+    pub fn new(input: FrameInput) -> Self {
+        Self { input }
     }
 
     pub fn clear(&self, state: ClearState) -> &Self {

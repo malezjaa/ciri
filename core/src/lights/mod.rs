@@ -1,11 +1,8 @@
 use crate::scenes::Scene;
 use ciri_math::{Mat4, Vec3, from_glam_vec};
+use std::sync::Arc;
 use three_d::{Context, DepthTexture2D, Light};
 use three_d_asset::Srgba;
-
-pub trait AbstractedLight: Send + Sync {
-    fn build(&self, context: &Context) -> Box<dyn Light>;
-}
 
 pub struct DirectionalLightBuilder {
     shadow_texture: Option<DepthTexture2D>,
@@ -37,8 +34,13 @@ impl DirectionalLightBuilder {
         self
     }
 
-    pub fn build(self) -> DirectionalLight {
-        DirectionalLight { opts: self }
+    pub fn build(&self, context: &Context) -> three_d::DirectionalLight {
+        three_d::DirectionalLight::new(
+            context,
+            self.intensity,
+            self.color,
+            from_glam_vec(self.direction),
+        )
     }
 }
 
@@ -62,25 +64,10 @@ impl DirectionalLight {
     pub fn builder() -> DirectionalLightBuilder {
         DirectionalLightBuilder::default()
     }
-
-    pub fn build(&self, context: &Context) -> three_d::DirectionalLight {
-        three_d::DirectionalLight::new(
-            context,
-            self.opts.intensity,
-            self.opts.color,
-            from_glam_vec(self.opts.direction),
-        )
-    }
-}
-
-impl AbstractedLight for DirectionalLight {
-    fn build(&self, context: &Context) -> Box<dyn Light> {
-        Box::new(self.build(context))
-    }
 }
 
 impl Scene {
-    pub fn add_light(&mut self, light: impl AbstractedLight + 'static) {
-        self.lights.push(Box::new(light))
+    pub fn add_light(&mut self, light: impl Light + Send + Sync + 'static) {
+        self.lights.push(Arc::new(light));
     }
 }

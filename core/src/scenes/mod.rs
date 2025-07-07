@@ -4,9 +4,7 @@ pub mod manager;
 
 use crate::{
     camera::manager::CameraManager,
-    engine::Engine,
     frame::Frame,
-    lights::AbstractedLight,
     scenes::components::{Component, Renderer},
 };
 use anyhow::Result;
@@ -30,6 +28,8 @@ pub struct GameObject {
     pub transform: Transform,
     active: bool,
     components: HashMap<TypeId, Box<dyn Component>>,
+    // doesn't get cleared on a new frame
+    dont_clear: bool,
 }
 
 impl Clone for GameObject {
@@ -40,6 +40,7 @@ impl Clone for GameObject {
             transform: self.transform,
             active: self.active,
             components: self.components.iter().map(|(k, v)| (*k, v.clone_component())).collect(),
+            dont_clear: self.dont_clear,
         }
     }
 }
@@ -62,6 +63,7 @@ impl GameObject {
             active: true,
             transform: Transform::identity(),
             components: HashMap::new(),
+            dont_clear: false,
         }
     }
 
@@ -72,6 +74,7 @@ impl GameObject {
             active: true,
             transform: Transform::identity(),
             components: HashMap::new(),
+            dont_clear: false,
         }
     }
 
@@ -82,6 +85,12 @@ impl GameObject {
     pub fn disable(&mut self) {
         self.active = false;
     }
+
+    #[must_use]
+    pub fn dont_clear(mut self) -> Self {
+        self.dont_clear = true;
+        self
+    }
 }
 
 pub struct Scene {
@@ -90,7 +99,7 @@ pub struct Scene {
     pub(crate) camera_manager: CameraManager,
     pub id_arena: Arena<GameObject>,
     pub frame: Option<Frame>,
-    pub lights: Vec<Box<dyn AbstractedLight>>,
+    pub lights: Vec<Arc<dyn Light + Send + Sync>>,
 }
 
 impl Debug for Scene {
@@ -118,6 +127,7 @@ impl Scene {
             active: temp.active,
             transform: temp.transform,
             components: temp.components,
+            dont_clear: temp.dont_clear,
         });
 
         self.objects.insert(id, self.id_arena[id].clone());
@@ -138,7 +148,8 @@ impl Scene {
 
     pub fn reset(&mut self) {
         self.frame = None;
-        self.objects.clear();
+
+        self.objects.retain(|_, object| object.dont_clear);
     }
 }
 
@@ -146,66 +157,52 @@ pub type UpdateResult = Result<FrameOutput>;
 pub type ResultFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 pub trait SceneTrait: SceneAuto + Any + Send + Sync + 'static {
-    fn update_sync(&mut self) -> UpdateResult {
+    fn update(&mut self) -> UpdateResult {
         Ok(FrameOutput::default())
     }
 
-    fn update_async(&mut self) -> ResultFuture<UpdateResult> {
-        Box::pin(async move { self.update_sync() })
-    }
-
-    fn full_update<'a>(&'a mut self, frame: &'a mut Frame) -> ResultFuture<'a, UpdateResult> {
-        Box::pin(async move {
-            {
-                let scene = self.scene();
-                scene.frame = Some(frame.clone());
-                scene.camera_manager.handle_events(frame);
-            }
-
-            self.update_async().await?;
-
+    fn full_update<'a>(&'a mut self, frame: &'a mut Frame) -> UpdateResult {
+        {
             let scene = self.scene();
-            let objects_count = scene.objects().len();
-            let mut objects = Vec::with_capacity(objects_count);
+            scene.frame = Some(frame.clone());
+            scene.camera_manager.handle_events(frame);
+        }
 
-            for (_, object) in scene.objects() {
-                if !object.active {
-                    continue;
-                }
+        self.update()?;
 
-                if let Some(renderer) = object.get_component::<Renderer>() {
-                    objects.push(&*renderer.to_render);
-                }
+        let scene = self.scene();
+        let objects_count = scene.objects().len();
+        let mut objects = Vec::with_capacity(objects_count);
+
+        for (_, object) in scene.objects() {
+            if !object.active {
+                continue;
             }
 
-            let ctx = &frame.ctx;
-            if let Some(camera) = scene.get_active_camera() {
-                let lights_count = scene.lights.len();
-                let mut built_lights = Vec::with_capacity(lights_count);
-                let mut light_refs = Vec::with_capacity(lights_count);
-
-                for light in &scene.lights {
-                    built_lights.push(light.build(ctx));
-                }
-
-                light_refs.extend(built_lights.iter().map(|l| &**l));
-
-                frame.clear(ClearState::color_and_depth(0.5, 0.5, 0.5, 1.0, 1.0));
-                frame.render(camera, objects, &light_refs);
+            if let Some(renderer) = object.get_component::<Renderer>() {
+                objects.push(&*renderer.to_render);
             }
+        }
 
-            self.scene().reset();
-            Ok(FrameOutput::default())
-        })
+        if let Some(camera) = scene.get_active_camera() {
+            frame.clear(ClearState::color_and_depth(0.5, 0.5, 0.5, 1.0, 1.0));
+            let light_refs: Vec<&dyn Light> =
+                scene.lights.iter().map(|l| l.as_ref() as &dyn Light).collect();
+            frame.render(camera, objects, &light_refs);
+        }
+
+        self.scene().reset();
+        Ok(FrameOutput::default())
     }
 
-    fn setup_async(&mut self) -> ResultFuture<Result<()>> {
-        Box::pin(async move { self.setup_sync() })
+    fn setup_async(&mut self, ctx: Context) -> ResultFuture<Result<()>> {
+        Box::pin(async move { self.setup_sync(ctx) })
     }
 
-    fn setup_sync(&mut self) -> Result<()> {
+    fn setup_sync(&mut self, _: Context) -> Result<()> {
         Ok(())
     }
+
     fn exit(&mut self) {}
 }
 

@@ -6,16 +6,18 @@ use std::{
     collections::HashMap,
     sync::Arc,
 };
+use three_d::Context;
 use three_d_asset::io::{load_and_deserialize_async, load_async};
 
 pub struct SceneManager {
     scenes: HashMap<TypeId, Box<dyn SceneTrait>>,
     active: TypeId,
+    context: Context,
 }
 
 impl SceneManager {
-    pub fn new() -> Self {
-        Self { scenes: HashMap::new(), active: TypeId::of::<()>() }
+    pub fn new(context: Context) -> Self {
+        Self { scenes: HashMap::new(), active: TypeId::of::<()>(), context }
     }
 
     pub fn register(&mut self, scene: impl SceneTrait + 'static) {
@@ -52,7 +54,7 @@ impl SceneManager {
 
             block_on(async {
                 scene.load_assets().await?;
-                scene.setup_async().await?;
+                scene.setup_async(self.context.clone()).await?;
                 Ok::<_, anyhow::Error>(())
             })?;
 
