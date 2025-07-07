@@ -212,6 +212,7 @@ pub trait SceneAuto {
     fn load_assets(&mut self) -> ResultFuture<Result<()>> {
         Box::pin(async move { Ok(()) })
     }
+    fn once_loaded(&self) -> bool;
 }
 
 impl dyn SceneTrait {
@@ -233,6 +234,7 @@ macro_rules! impl_scene {
         pub struct $struct {
             pub scene: Scene,
             pub data: $data,
+            pub once_loaded: bool,
              $(
                 $(
                     pub $asset_name: $asset_ty,
@@ -245,6 +247,7 @@ macro_rules! impl_scene {
                 Self {
                     scene: Scene::new($name),
                     data: <$data>::default(),
+                    once_loaded: false,
                     $(
                         $(
                            $asset_name: <$asset_ty>::default(),
@@ -274,6 +277,10 @@ macro_rules! impl_scene {
 
                     Ok(())
                 })
+            }
+
+            fn once_loaded(&self) -> bool {
+                self.once_loaded
             }
         }
 

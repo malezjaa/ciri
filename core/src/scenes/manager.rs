@@ -20,10 +20,12 @@ impl SceneManager {
         Self { scenes: HashMap::new(), active: TypeId::of::<()>(), context }
     }
 
+    /// Register a new scene, that you can later activate that with [SceneManager::set_active]
     pub fn register(&mut self, scene: impl SceneTrait + 'static) {
         self.scenes.insert(scene.type_id(), Box::new(scene));
     }
 
+    /// Same as [SceneManager::get_mut], but gets the scene by name.
     pub fn get_mut_name<T: SceneTrait + 'static>(&mut self, name: String) -> Option<&mut T> {
         self.scenes
             .values_mut()
@@ -32,12 +34,18 @@ impl SceneManager {
             .downcast_mut::<T>()
     }
 
+    /// Mutably gets the expected scene and casts it to `T`
     pub fn get_mut<T: SceneTrait + 'static>(&mut self) -> Option<&mut T> {
         self.scenes
             .get_mut(&TypeId::of::<T>())
             .and_then(|scene| scene.as_any_mut().downcast_mut::<T>())
     }
 
+    /// Marks the provided type as an active scene.
+    ///
+    /// It loads the assets and invokes the setup method only once.
+    ///
+    /// Returns a boolean based if the switch was successful.
     pub fn set_active<T: SceneTrait + 'static>(&mut self) -> Result<bool> {
         let type_id = TypeId::of::<T>();
 
@@ -52,11 +60,13 @@ impl SceneManager {
         if let Some(scene) = self.scenes.get_mut(&type_id) {
             self.active = type_id;
 
-            block_on(async {
-                scene.load_assets().await?;
-                scene.setup_async(self.context.clone()).await?;
-                Ok::<_, anyhow::Error>(())
-            })?;
+            if !scene.once_loaded() {
+                block_on(async {
+                    scene.load_assets().await?;
+                    scene.setup_async(self.context.clone()).await?;
+                    Ok::<_, anyhow::Error>(())
+                })?;
+            }
 
             Ok(true)
         } else {
