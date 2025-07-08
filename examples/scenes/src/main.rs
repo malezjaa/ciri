@@ -5,6 +5,7 @@ use ciri::{
     lights::{AmbientLight, DirectionalLight},
     logger::init_logger,
     math::Vec3,
+    model::Model,
     scenes::{
         GameObject, ResultFuture, Scene, SceneAuto, SceneTrait, UpdateResult, components::Renderer,
     },

@@ -8,7 +8,7 @@ mod id;
 pub mod lights;
 pub mod logger;
 pub mod macros;
-mod model;
+pub mod model;
 mod object;
 pub mod options;
 pub mod scenes;
