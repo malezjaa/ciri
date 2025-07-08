@@ -11,7 +11,6 @@ pub mod macros;
 mod object;
 pub mod options;
 pub mod scenes;
-pub mod shapes;
 
 pub use bounding_box::*;
 pub use ciri_math as math;

@@ -8,7 +8,6 @@ use ciri::{
     scenes::{
         GameObject, ResultFuture, Scene, SceneAuto, SceneTrait, UpdateResult, components::Renderer,
     },
-    shapes::create_cylinder,
 };
 use ciri_math::{Transform, vector};
 use log::error;
