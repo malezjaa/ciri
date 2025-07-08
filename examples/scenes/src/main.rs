@@ -43,9 +43,7 @@ impl SceneTrait for Game {
                 .build(&ctx),
         );
 
-        self.scene.add_object(
-            GameObject::new("environment").dont_clear().with_component(Renderer::new(skybox)),
-        );
+        self.scene.add_object(GameObject::new("environment").with_component(Renderer::new(skybox)));
 
         Ok(())
     }

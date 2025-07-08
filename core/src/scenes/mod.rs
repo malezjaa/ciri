@@ -28,8 +28,6 @@ pub struct GameObject {
     pub transform: Transform,
     active: bool,
     components: HashMap<TypeId, Box<dyn Component>>,
-    // doesn't get cleared on a new frame
-    dont_clear: bool,
 }
 
 impl Clone for GameObject {
@@ -40,7 +38,6 @@ impl Clone for GameObject {
             transform: self.transform,
             active: self.active,
             components: self.components.iter().map(|(k, v)| (*k, v.clone_component())).collect(),
-            dont_clear: self.dont_clear,
         }
     }
 }
@@ -63,7 +60,6 @@ impl GameObject {
             active: true,
             transform: Transform::identity(),
             components: HashMap::new(),
-            dont_clear: false,
         }
     }
 
@@ -74,7 +70,6 @@ impl GameObject {
             active: true,
             transform: Transform::identity(),
             components: HashMap::new(),
-            dont_clear: false,
         }
     }
 
@@ -84,12 +79,6 @@ impl GameObject {
 
     pub fn disable(&mut self) {
         self.active = false;
-    }
-
-    #[must_use]
-    pub fn dont_clear(mut self) -> Self {
-        self.dont_clear = true;
-        self
     }
 }
 
@@ -127,7 +116,6 @@ impl Scene {
             active: temp.active,
             transform: temp.transform,
             components: temp.components,
-            dont_clear: temp.dont_clear,
         });
 
         self.objects.insert(id, self.id_arena[id].clone());
@@ -144,12 +132,6 @@ impl Scene {
 
     pub fn objects(&self) -> &HashMap<GameObjectId, GameObject> {
         &self.objects
-    }
-
-    pub fn reset(&mut self) {
-        self.frame = None;
-
-        self.objects.retain(|_, object| object.dont_clear);
     }
 }
 
@@ -191,7 +173,7 @@ pub trait SceneTrait: SceneAuto + Any + Send + Sync + 'static {
             frame.render(camera, objects, &light_refs);
         }
 
-        self.scene().reset();
+        self.scene().frame = None;
         Ok(FrameOutput::default())
     }
 
