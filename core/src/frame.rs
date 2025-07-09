@@ -16,6 +16,10 @@ impl Frame {
         self.input.screen().clear(state);
         self
     }
+    
+    pub fn delta_time(&self) -> f32 {
+        self.input.elapsed_time as f32
+    }
 
     pub fn render(
         &self,

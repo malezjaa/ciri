@@ -1,3 +1,6 @@
+mod rotator;
+
+use crate::rotator::Rotator;
 use anyhow::Result;
 use ciri::{
     engine::Engine,
@@ -45,6 +48,7 @@ impl SceneTrait for Game {
         );
 
         self.scene.add_object(GameObject::new("environment").with_component(Renderer::new(skybox)));
+        self.scene.add_object(GameObject::new("rotator").with_component(Rotator::new(0.5)));
 
         Ok(())
     }

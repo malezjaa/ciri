@@ -218,6 +218,21 @@ impl Transform {
             scale: self.scale.lerp(other.scale, t),
         }
     }
+
+    /// Rotates this transform around the Y axis by the specified angle in radians.
+    pub fn rotate_y(&mut self, angle: f32) {
+        self.rotation *= Quat::from_axis_angle(Vec3::Y, angle);
+    }
+
+    /// Rotates this transform around the X axis by the specified angle in radians.
+    pub fn rotate_x(&mut self, angle: f32) {
+        self.rotation *= Quat::from_axis_angle(Vec3::X, angle);
+    }
+
+    /// Rotates this transform around the Z axis by the specified angle in radians.
+    pub fn rotate_z(&mut self, angle: f32) {
+        self.rotation *= Quat::from_axis_angle(Vec3::Z, angle);
+    }
 }
 
 impl Default for Transform {

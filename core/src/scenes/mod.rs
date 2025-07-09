@@ -1,11 +1,16 @@
 use three_d::HasContext;
 pub mod components;
+mod game_object;
+pub use game_object::*;
 pub mod manager;
 
-use crate::{
+pub use crate::{
     camera::manager::CameraManager,
     frame::Frame,
-    scenes::components::{Component, Renderer},
+    scenes::{
+        components::{Component, Renderer},
+        game_object::{GameObject, GameObjectId},
+    },
 };
 use anyhow::Result;
 use ciri_math::Transform;
@@ -19,68 +24,6 @@ use std::{
 };
 use three_d::{ClearState, Context, FrameInput, FrameOutput, Light, Object, Viewer, Window};
 use three_d_asset::io::{RawAssets, load_and_deserialize_async};
-
-pub type GameObjectId = Id<GameObject>;
-
-pub struct GameObject {
-    pub id: Option<GameObjectId>,
-    pub name: String,
-    pub transform: Transform,
-    active: bool,
-    components: HashMap<TypeId, Box<dyn Component>>,
-}
-
-impl Clone for GameObject {
-    fn clone(&self) -> Self {
-        Self {
-            id: None,
-            name: self.name.clone(),
-            transform: self.transform,
-            active: self.active,
-            components: self.components.iter().map(|(k, v)| (*k, v.clone_component())).collect(),
-        }
-    }
-}
-
-impl Debug for GameObject {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct(&format!("GameObject \"{}\"", self.name))
-            .field("active", &self.active)
-            .field("transform", &self.transform)
-            .field("components", &self.components)
-            .finish()
-    }
-}
-
-impl GameObject {
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            name: name.into(),
-            active: true,
-            transform: Transform::identity(),
-            components: HashMap::new(),
-        }
-    }
-
-    pub fn new_temp(name: String) -> Self {
-        Self {
-            id: None,
-            name,
-            active: true,
-            transform: Transform::identity(),
-            components: HashMap::new(),
-        }
-    }
-
-    pub fn enable(&mut self) {
-        self.active = true;
-    }
-
-    pub fn disable(&mut self) {
-        self.active = false;
-    }
-}
 
 pub struct Scene {
     pub name: &'static str,
@@ -151,10 +94,10 @@ pub trait SceneTrait: SceneAuto + Any + Send + Sync + 'static {
         }
 
         self.update()?;
+        self.scene().update(frame.delta_time());
 
         let scene = self.scene();
-        let objects_count = scene.objects().len();
-        let mut objects = Vec::with_capacity(objects_count);
+        let mut objects = Vec::new();
 
         for (_, object) in scene.objects() {
             if !object.active {
